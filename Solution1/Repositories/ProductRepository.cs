@@ -12,8 +12,6 @@ namespace Repositories
     {
         public void DeleteProduct(Product p) => ProductDAO.DeleteProduct(p);    
 
-        public List<Category> GetCategories() => CategoryDAO.GetCategories();
-
         public Product GetProductById(int id) => ProductDAO.FindProductById(id);
 
         public List<Product> GetProducts() => ProductDAO.GetProducts();

@@ -11,21 +11,28 @@ namespace DataAccess
     {
         public static List<Product> GetProducts()
         {
-            var listProducts = new List<Product>();
             try
             {
                 using (var context = new MyDbContext())
                 {
-                    listProducts = context.Products.ToList();
+                    return context.Products
+                                  .Select(p => new Product
+                                  {
+                                      ProductId = p.ProductId,
+                                      ProductName = p.ProductName,
+                                      UnitsInStock = p.UnitsInStock,
+                                      UnitPrice = p.UnitPrice
+                                      // Không include Category nếu không cần
+                                  })
+                                  .ToList();
                 }
             }
             catch (Exception e)
             {
                 throw new Exception("Error retrieving products: " + e.Message, e);
             }
-            return listProducts;
-
         }
+
         public static Product FindProductById(int proId)
         {
             Product p = new Product();

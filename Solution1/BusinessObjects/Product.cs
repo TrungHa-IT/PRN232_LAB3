@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -21,6 +22,7 @@ namespace BusinessObjects
         public int UnitsInStock { get; set; }
         [Required]
         public decimal UnitPrice { get; set; }
+        [ValidateNever]
         public virtual Category Category { get; set; }
     }
 }

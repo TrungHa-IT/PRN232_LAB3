@@ -13,7 +13,6 @@ namespace Repositories
         Product GetProductById(int id);
         void DeleteProduct(Product p);
         void UpdateProduct(Product p);
-        List<Category> GetCategories();
         List<Product> GetProducts();    
     }
 }

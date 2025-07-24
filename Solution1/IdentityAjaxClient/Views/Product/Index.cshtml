@@ -1,70 +1,151 @@
-﻿<div class="container-fluid">
-    <h2>Product List</h2>
-    <table class="table table-sm table-striped table-bordered m-2">
-        <thead>
-            <tr>
-                <th>Product ID</th>
-                <th>Product Name</th>
-                <th>UnitsInStock</th>
-                <th>Unit Price</th>
-                <th>Update</th>
-                <th>Delete</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-</div>
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Product List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Product List</h2>
+            <a href="/Product/Create" class="btn btn-success">+ Create New</a>
+        </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <input type="text" id="searchBox" class="form-control" placeholder="Search by Product Name..." />
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary" id="searchBtn">Search</button>
+            </div>
+        </div>
 
-<script type="text/javascript">
-    $(document).ready(function () {
-        ShowAllProducts();
+        <table class="table table-sm table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th><a href="#" class="sort-header" data-sort="ProductId">Product ID</a></th>
+                    <th><a href="#" class="sort-header" data-sort="ProductName">Product Name</a></th>
+                    <th>Units In Stock</th>
+                    <th>Unit Price</th>
+                    <th>Edit</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
 
-        function ShowAllProducts() {
+        <div id="noData" class="text-danger d-none">No products found.</div>
+
+        <nav>
+            <ul class="pagination" id="pagination"></ul>
+        </nav>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const pageSize = 5;
+        let sortBy = "ProductId";
+        let sortDir = "asc";
+        let currentSearch = "";
+
+        $(document).ready(function () {
+            loadData();
+
+            $("#searchBtn").click(function () {
+                currentSearch = $("#searchBox").val();
+                currentPage = 1;
+                loadData();
+            });
+
+            $(document).on("click", ".pagination .page-link", function (e) {
+                e.preventDefault();
+                const page = $(this).data("page");
+                if (page !== currentPage) {
+                    currentPage = page;
+                    loadData();
+                }
+            });
+
+            $(document).on("click", ".sort-header", function (e) {
+                e.preventDefault();
+                const newSortBy = $(this).data("sort");
+
+                if (sortBy === newSortBy) {
+                    sortDir = sortDir === "asc" ? "desc" : "asc";
+                } else {
+                    sortBy = newSortBy;
+                    sortDir = "asc";
+                }
+
+                loadData();
+            });
+
+            $(document).on("click", ".delete-btn", function () {
+                const id = $(this).data("id");
+                if (confirm("Are you sure you want to delete this product?")) {
+                    $.ajax({
+                        url: `https://localhost:7047/api/Products/${id}`,
+                        type: "DELETE",
+                        success: function () {
+                            alert("Product deleted!");
+                            loadData();
+                        },
+                        error: function (xhr) {
+                            alert("Delete failed: " + xhr.responseText);
+                        }
+                    });
+                }
+            });
+        });
+
+        function loadData() {
             $("table tbody").html("");
+            $("#noData").addClass("d-none");
+
             $.ajax({
-                url: "https://localhost:7047/api/Products",
+                url: `https://localhost:7047/api/Products/search?keyword=${currentSearch}&page=${currentPage}&pageSize=${pageSize}&sortBy=${sortBy}&isAsc=${sortDir === 'asc'}`,
                 type: "GET",
-                contentType: "application/json; charset=utf-8",
                 dataType: "json",
-                success: function (result, status, xhr) {
-                    $.each(result, function (index, value) {
-                        var row = $("<tr>");
-                        row.append($("<td>").text(value.productId));
-                        row.append($("<td>").text(value.productName));
-                        row.append($("<td>").text(value.unitsInStock));
-                        row.append($("<td>").text(value.unitPrice));
-                        row.append($("<td>").html(
-                            "<a class='btn btn-sm btn-primary' href='/Product/Edit?id=" + value.productId + "'>Edit</a>"
-                        ));
-                        row.append($("<td>").html(
-                            "<button class='btn btn-sm btn-danger delete-btn' data-id='" + value.productId + "'>Delete</button>"
-                        ));
+                success: function (res) {
+                    const products = res.products;
+                    const totalPages = Math.ceil(res.totalItems / res.pageSize);
+
+                    if (products.length === 0) {
+                        $("#noData").removeClass("d-none");
+                    }
+
+                    $.each(products, function (i, product) {
+                        const row = $("<tr>");
+                        row.append($("<td>").text(product.productId));
+                        row.append($("<td>").text(product.productName));
+                        row.append($("<td>").text(product.unitsInStock));
+                        row.append($("<td>").text(product.unitPrice));
+                        row.append($("<td>").html(`<a class='btn btn-sm btn-primary' href='/Product/Edit?id=${product.productId}'>Edit</a>`));
+                        row.append($("<td>").html(`<button class='btn btn-sm btn-danger delete-btn' data-id='${product.productId}'>Delete</button>`));
                         $("table tbody").append(row);
                     });
+
+                    renderPagination(totalPages);
                 },
-                error: function (xhr, status, error) {
-                    console.log("Error:", xhr.responseText);
+                error: function (xhr) {
+                    alert("Failed to fetch data: " + xhr.responseText);
                 }
             });
         }
 
-        $(document).on("click", ".delete-btn", function () {
-            var id = $(this).data("id");
-            if (confirm("Are you sure you want to delete this product?")) {
-                $.ajax({
-                    type: "DELETE",
-                    url: "https://localhost:7047/api/Products/" + id,
-                    success: function () {
-                        alert("Product deleted!");
-                        ShowAllProducts(); // refresh lại table
-                    },
-                    error: function (xhr) {
-                        alert("Delete failed: " + xhr.responseText);
-                    }
-                });
+        function renderPagination(totalPages) {
+            const pagination = $("#pagination");
+            pagination.html("");
+
+            for (let i = 1; i <= totalPages; i++) {
+                const li = $("<li>").addClass("page-item").toggleClass("active", i === currentPage);
+                const a = $("<a>").addClass("page-link").text(i).attr("href", "#").data("page", i);
+                li.append(a);
+                pagination.append(li);
             }
-        });
-    });
-</script>
+        }
+    </script>
+</body>
+</html>

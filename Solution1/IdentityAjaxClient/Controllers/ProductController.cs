@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using BusinessObjects;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace IdentityAjaxClient.Controllers
 {
@@ -24,8 +25,9 @@ namespace IdentityAjaxClient.Controllers
         }
 
         // GET: ProductController/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
+            await LoadCategories();
             return View();
         }
 
@@ -34,29 +36,53 @@ namespace IdentityAjaxClient.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Product product)
         {
+            if (!ModelState.IsValid)
+            {
+                await LoadCategories();
+                return View(product);
+            }
+
             var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/Products", product);
             if (response.IsSuccessStatusCode)
                 return RedirectToAction(nameof(Index));
+
+            ModelState.AddModelError(string.Empty, "Server error.");
+            await LoadCategories();
             return View(product);
         }
 
-        // GET: ProductController/Edit/5
         public async Task<IActionResult> Edit(int id)
         {
             var product = await _httpClient.GetFromJsonAsync<Product>($"{_baseUrl}/Products/{id}");
+            await LoadCategories(product.CategoryId);
             return View(product);
         }
 
-        // POST: ProductController/Edit/5
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Product product)
         {
+            if (id != product.ProductId)
+            {
+                return BadRequest(); // hoặc return NotFound();
+            }
+
+            if (!ModelState.IsValid)
+            {
+                await LoadCategories(product.CategoryId);
+                return View(product);
+            }
+
             var response = await _httpClient.PutAsJsonAsync($"{_baseUrl}/Products/{id}", product);
             if (response.IsSuccessStatusCode)
                 return RedirectToAction(nameof(Index));
+
+            ModelState.AddModelError(string.Empty, "Server error.");
+            await LoadCategories(product.CategoryId);
             return View(product);
         }
+
 
         // GET: ProductController/Delete/5
         public async Task<IActionResult> Delete(int id)
@@ -73,5 +99,12 @@ namespace IdentityAjaxClient.Controllers
             var response = await _httpClient.DeleteAsync($"{_baseUrl}/Products/{id}");
             return RedirectToAction(nameof(Index));
         }
+
+        private async Task LoadCategories(int? selectedId = null)
+        {
+            var categories = await _httpClient.GetFromJsonAsync<List<Category>>($"{_baseUrl}/Categories");
+            ViewBag.Categories = new SelectList(categories, "CategoryId", "CategoryName", selectedId);
+        }
+
     }
 }
